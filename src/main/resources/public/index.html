@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Gibson</title>
+    <style type="text/css">
+      .pargraph_date {
+        font-size:8pt;
+      }
+
+      .pargraph_text {
+        font-size:16pt;
+        font-style: italic;
+        padding-top: 4px;
+        padding-bottom: 4px;
+      }
+
+      .pargraph_url {
+        font-size:8pt;
+      }
+
+      body {
+        width:40%;
+        height:100%;
+        margin-left:auto;
+        margin-right:auto;
+      }
+
+      #search_div {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+      }
+
+      #result_col {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .child {
+        padding:8px;
+        background: #f4f;
+        flex-wrap: wrap;
+      }
+
+      .pagination_btn {
+        text-align: center;
+        margin: 4px;
+      }
+
+      #paginator {
+        display: none;
+        justify-content:center;
+        align-items:center;
+      }
+
+      #error_div {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+      }
+
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="search_div">
+        <h1>Gibson-dev</h1>
+        <form id='search_form'>
+          <input id="search_field" type="text" name="Search" value=""/>
+        </form>
+      </div>
+      <div id="paginator" class="child">
+        <button id="btn_back" class="pagination_btn" disabled=disabled>Back</button>
+        <button id="btn_next" class="pagination_btn">Next</button>
+      </div>
+      <div id="result_col" class="flex-grid-thirds"></div>
+      <div id="error_div" class="paginator">
+        <p id="error_message"></p>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      var page = 0;
+      var phrase = "";
+
+      // Enter //
+      document.getElementById('search_field').addEventListener('keypress', function(event) {
+        if (event.keyCode == 13) {
+          paginatorVisible(false);
+          event.preventDefault();
+          page = 0;
+          phrase = search_field.value;
+          search();
+          search_field.value = "";
+        }
+      });
+
+      // Back //
+      document.getElementById('btn_back').addEventListener("click", function(event) {
+        page--;
+        checkNonNegativePage();
+        document.getElementById('btn_next').disabled = false;
+        search();
+      });
+
+      // Next //
+      document.getElementById('btn_next').addEventListener("click", function(event) {
+        page++;
+        checkNonNegativePage();
+        search();
+      });
+
+      // Page > 0? //
+      function checkNonNegativePage() {
+        if(page > 0) document.getElementById('btn_back').disabled = false;
+        else document.getElementById('btn_back').disabled = true;
+      }
+
+      // Search //
+      function search() {
+        showError(false);
+        console.log("Searching for: " + phrase);
+        console.log("Page: " + page);
+        document.getElementById('result_col').innerHTML = "";
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "http://localhost:8080/api/search/" + phrase + "/" + page, true);
+        xhr.onload = function (e) {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              var response = JSON.parse(xhr.responseText);
+              if(response.length >= 0){
+                prettyPrint(response);
+                paginatorVisible(true);
+              } else {
+                showError("No hits :(");
+                paginatorVisible(false);
+              }
+              console.log("Response length:" + response.length);
+              if(response.length < 30) document.getElementById('btn_next').disabled = true;
+            } else {
+              console.error(xhr.statusText);
+              showError("Shit's on fire, yo.");
+            }
+          }
+        };
+        xhr.onerror = function (e) {
+          console.error(xhr.statusText);
+          showError("Shit's on fire, yo.");
+          console.log("Shit's on fire, yo.");
+        };
+        xhr.send(null);
+      }
+
+      function paginatorVisible(visible) {
+        checkNonNegativePage();
+        if(visible) document.getElementById('paginator').style.display = 'flex'; 
+        else document.getElementById('paginator').style.display = 'none'; 
+      }
+
+      function showError(message) {
+        if(message === false){
+          document.getElementById('error_div').style.display = 'none'; 
+        } else {
+          document.getElementById('error_message').innerHTML = message; 
+          document.getElementById('error_div').style.display = 'flex'; 
+        }
+      }
+
+      // Show result //
+      function prettyPrint(result) {
+        for(var i = 0; i < result.length; i++) {
+          document.getElementById('result_col').innerHTML += 
+            "<div class=\"child flex-grid-thirds col\">" + 
+              "<div class=\"paragraph_speaker\">" + result[i].airingDate+ "</div>" +
+                "<div class=\"pargraph_text\">" + result[i].paragraph + "</div>" +
+                  "<div class=\"pargraph_text\">" + result[i].paragraph + "</div>" +
+                    "<div class=\"paragraph_url_audio\"><a target=\"blank\" href=\"" + result[i].sourceAudioUrl + "\">Audio source</a>" +
+                      " <a target=\"blank\" href=\"" + result[i].sourceTranscriptUrl + "\">Text source</a></div>" +
+                        "</div><br>";
+        }
+      }
+
+    </script>
+  </body>
+</html>
